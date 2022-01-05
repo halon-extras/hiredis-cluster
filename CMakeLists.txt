@@ -1,0 +1,93 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+
+PROJECT("hiredis-cluster" VERSION 1.0.0)
+
+# RPM/DEB and CENTOS7/CENTOS8/UBU1804/UBU2004
+FILE(STRINGS /OSRELEASE.txt OSRELEASE)
+
+IF (OSRELEASE MATCHES "CENTOS7")
+	SET(CPACK_GENERATOR "RPM")
+ELSEIF (OSRELEASE MATCHES "CENTOS8")
+	SET(CPACK_GENERATOR "RPM")
+ELSEIF (OSRELEASE MATCHES "UBU1804")
+	SET(CPACK_GENERATOR "DEB")
+ELSEIF (OSRELEASE MATCHES "UBU2004")
+	SET(CPACK_GENERATOR "DEB")
+ELSE()
+	MESSAGE(FATAL_ERROR "Invalid OSRELEASE")
+ENDIF()
+
+SET(CMAKE_BUILD_TYPE Release)
+SET(CMAKE_CXX_FLAGS_RELEASE "-std=c++17 -Wall -Wvla -Wshadow -Wconversion -Wno-sign-conversion -Wno-c++11-narrowing -O2 -fno-strict-aliasing -Wextra -Wno-unused-parameter")
+
+ADD_LIBRARY(hiredis-cluster SHARED
+	hiredis-cluster.cpp
+)
+
+TARGET_LINK_LIBRARIES(hiredis-cluster
+	-lhiredis
+	-lhiredis_cluster
+)
+
+SET_TARGET_PROPERTIES(hiredis-cluster PROPERTIES PREFIX "")
+
+INCLUDE_DIRECTORIES(
+	/opt/halon/include
+	/usr/local/include/hiredis_cluster
+)
+
+IF(EXISTS "/etc/os-release")
+	EXECUTE_PROCESS(COMMAND "sed" "-ne" "s/^ID=\"\\?\\([a-z]\\+\\)\"\\?$/\\1/p" "/etc/os-release" OUTPUT_VARIABLE OS_RELEASE_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
+	EXECUTE_PROCESS(COMMAND "sed" "-ne" "s/^VERSION_ID=\"\\?\\([0-9\\.]\\+\\)\"\\?$/\\1/p" "/etc/os-release" OUTPUT_VARIABLE OS_RELEASE_VERSION_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
+	EXECUTE_PROCESS(COMMAND "uname" "-m" OUTPUT_VARIABLE OS_RELEASE_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+	SET(SYSTEM_NAME "${OS_RELEASE_ID}-${OS_RELEASE_VERSION_ID}-${OS_RELEASE_ARCH}")
+ENDIF()
+
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/hiredis-cluster.so DESTINATION plugins)
+INSTALL(FILES hiredis-cluster.schema.json DESTINATION share/plugins)
+
+IF(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.14.0") 
+	FILE(CREATE_LINK "/opt/halon/plugins/hiredis-cluster.so" "${CMAKE_CURRENT_BINARY_DIR}/hiredis-cluster.so.link" SYMBOLIC)
+ELSE()
+	ADD_CUSTOM_TARGET(link_target ALL COMMAND ${CMAKE_COMMAND} -E create_symlink "/opt/halon/plugins/hiredis-cluster.so" "${CMAKE_CURRENT_BINARY_DIR}/hiredis-cluster.so.link")
+ENDIF()
+
+INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/hiredis-cluster.so.link" DESTINATION plugins/autoload/smtpd RENAME hiredis-cluster.so)
+INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/hiredis-cluster.so.link" DESTINATION plugins/autoload/hsh RENAME hiredis-cluster.so)
+
+INSTALL(FILES "LICENSE" DESTINATION share/doc/plugins/hiredis-cluster)
+INSTALL(FILES "/libhiredis_cluster/LICENSE" DESTINATION share/doc/plugins/hiredis-cluster RENAME LICENSE.libhiredis_cluster)
+INSTALL(FILES "/hiredis/LICENSE" DESTINATION share/doc/plugins/hiredis-cluster RENAME LICENSE.hiredis)
+
+IF (CPACK_GENERATOR MATCHES "DEB")
+	INSTALL(FILES /usr/local/lib/libhiredis_cluster.so.0.7 DESTINATION /usr/local/lib)
+	INSTALL(FILES /usr/local/lib/libhiredis.so.1.0.0 DESTINATION /usr/local/lib)
+ENDIF()
+IF (CPACK_GENERATOR MATCHES "RPM")
+	INSTALL(FILES /usr/local/lib64/libhiredis_cluster.so.0.7 DESTINATION /usr/local/lib64)
+	INSTALL(FILES /usr/local/lib64/libhiredis.so.1.0.0 DESTINATION /usr/local/lib64)
+ENDIF()
+
+SET(CPACK_PACKAGING_INSTALL_PREFIX "/opt/halon")
+IF (CPACK_GENERATOR MATCHES "DEB")
+	SET(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+	SET(CPACK_DEBIAN_PACKAGE_DEPENDS "halon (>= 5.8)")
+	SET(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/postinst;${CMAKE_CURRENT_SOURCE_DIR}/postrm")
+ENDIF()
+IF (CPACK_GENERATOR MATCHES "RPM")
+	SET(CPACK_RPM_PACKAGE_AUTOREQPROV ON)
+	SET(CPACK_RPM_PACKAGE_REQUIRES "halon >= 5.8")
+	SET(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/postinst")
+	SET(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/postrm")
+ENDIF()
+
+SET(CPACK_PACKAGE_NAME "halon-extras-hiredis-cluster")
+SET(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Halon extras hiredis-cluster client")
+SET(CPACK_PACKAGE_DESCRIPTION "Halon extras hiredis-cluster client")
+SET(CPACK_PACKAGE_CONTACT "Halon support@halon.io")
+SET(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-${SYSTEM_NAME}")
+
+SET(CPACK_DEBIAN_PACKAGE_SECTION "mail")
+
+INCLUDE(CPack)

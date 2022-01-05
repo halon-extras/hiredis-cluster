@@ -1,0 +1,4 @@
+#!/bin/sh
+
+ldconfig
+echo "don't forget to enable plugin by first adding a configuration and then restarting smtpd"
