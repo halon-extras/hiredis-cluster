@@ -1,4 +1,4 @@
-# Hiredis-cluster client plugin
+# Redis cluster client plugin
 
 This plugin is a wrapper around [hiredis-cluster](https://github.com/Nordix/hiredis-cluster). 
 Hiredis-cluster is a client library for cluster deployments of the Redis database,
