@@ -1,0 +1,44 @@
+version: '2'
+services:
+  halon-smtpd:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+      args:
+        HALON_REPO_USER: ${HALON_REPO_USER}
+        HALON_REPO_PASS: ${HALON_REPO_PASS}
+    volumes:
+      - ../:/hiredis-cluster
+      - ./smtpd/dist:/etc/halon
+      - halon-spool:/var/spool/halon
+  redis-node-1:
+    image: docker.io/bitnami/redis-cluster:6.2
+    volumes:
+      - redis-cluster_data-1:/bitnami/redis/data
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=redis-node-1 redis-node-2 redis-node-3'
+  redis-node-2:
+    image: docker.io/bitnami/redis-cluster:6.2
+    volumes:
+      - redis-cluster_data-2:/bitnami/redis/data
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=redis-node-1 redis-node-2 redis-node-3'
+  redis-node-3:
+    image: docker.io/bitnami/redis-cluster:6.2
+    volumes:
+      - redis-cluster_data-3:/bitnami/redis/data
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_CLUSTER_REPLICAS=0'
+      - 'REDIS_NODES=redis-node-1 redis-node-2 redis-node-3'
+      - 'REDIS_CLUSTER_CREATOR=yes'
+volumes:
+  halon-spool:
+  redis-cluster_data-1:
+  redis-cluster_data-2:
+  redis-cluster_data-3:

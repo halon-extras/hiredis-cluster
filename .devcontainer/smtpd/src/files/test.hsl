@@ -1,0 +1,2 @@
+echo redisClusterCommand("SET", "foo", "bar");
+echo redisClusterCommand("GET", "foo");
