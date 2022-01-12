@@ -31,7 +31,7 @@ redisClusterContext* redisClusterContextInit2()
 		struct timeval tv = { strtol(connect_timeout.c_str(), nullptr, 10) , 0 };
 		redisClusterSetOptionConnectTimeout(cc, tv);
 	}
-	if (timeout.empty())
+	if (!timeout.empty())
 	{
 		struct timeval tv = { strtol(timeout.c_str(), nullptr, 10) , 0 };
 		redisClusterSetOptionTimeout(cc, tv);
