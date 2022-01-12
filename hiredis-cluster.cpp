@@ -48,6 +48,7 @@ redisClusterContext* redisClusterContextInit2()
 	int ret = redisClusterSetOptionAddNodes(cc, nodes.c_str());
 	if (ret != REDIS_OK)
 	{
+		redisClusterFree(cc);
 		throw std::runtime_error("bad nodes");
 	}
 
@@ -154,9 +155,10 @@ void HSLRedisClusterCommand(HalonHSLContext* hhc, HalonHSLArguments* args, Halon
 	redisReply* reply = (redisReply*)redisClusterCommandArgv(cc, argv.size(), &argv[0], &lens[0]);
 	if (!reply)
 	{
-		redisClusterFree(cc);
 		try {
-			cc = redisClusterContextInit2();
+			redisClusterContext *cc2 = redisClusterContextInit2();
+			redisClusterFree(cc);
+			cc = cc2;
 		} catch (const std::runtime_error& e) {
 			set_ret_error(ret, e.what());
 			goto add_back;
