@@ -32,9 +32,12 @@ ADD_LIBRARY(hiredis-cluster SHARED
 	hiredis-cluster.cpp
 )
 
+FIND_LIBRARY(HIREDIS hiredis)
+FIND_LIBRARY(HIREDIS_CLUSTER hiredis_cluster)
+
 TARGET_LINK_LIBRARIES(hiredis-cluster
-	-lhiredis
-	-lhiredis_cluster
+	${HIREDIS}
+	${HIREDIS_CLUSTER}
 )
 
 SET_TARGET_PROPERTIES(hiredis-cluster PROPERTIES PREFIX "")
